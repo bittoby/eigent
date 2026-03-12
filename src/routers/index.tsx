@@ -13,7 +13,7 @@
 // ========= Copyright 2025-2026 @ Eigent.ai All Rights Reserved. =========
 
 import { useAuthStore } from '@/store/authStore';
-import { lazy, useEffect, useReducer } from 'react';
+import { lazy, useEffect } from 'react';
 import { Navigate, Outlet, Route, Routes } from 'react-router-dom';
 
 import Layout from '@/components/Layout';
@@ -24,70 +24,22 @@ const Home = lazy(() => import('@/pages/Home'));
 const History = lazy(() => import('@/pages/History'));
 const NotFound = lazy(() => import('@/pages/NotFound'));
 
-interface AuthState {
-  loading: boolean;
-  isAuthenticated: boolean;
-  initialized: boolean;
-}
-
-type AuthAction =
-  | { type: 'INITIALIZE'; payload: { isAuthenticated: boolean } }
-  | { type: 'LOGOUT' };
-
-const authReducer = (state: AuthState, action: AuthAction): AuthState => {
-  switch (action.type) {
-    case 'INITIALIZE':
-      return {
-        loading: false,
-        isAuthenticated: action.payload.isAuthenticated,
-        initialized: true,
-      };
-    case 'LOGOUT':
-      return {
-        loading: false,
-        isAuthenticated: false,
-        initialized: true,
-      };
-    default:
-      return state;
-  }
-};
-
 // Route guard: Check if user is logged in
 const ProtectedRoute = () => {
-  const [state, dispatch] = useReducer(authReducer, {
-    loading: false,
-    isAuthenticated: false,
-    initialized: false,
-  });
-
   const { token, localProxyValue, logout } = useAuthStore();
+
   useEffect(() => {
     // Check VITE_USE_LOCAL_PROXY value on app startup
     if (token) {
       const currentProxyValue = import.meta.env.VITE_USE_LOCAL_PROXY || null;
-      const storedProxyValue = localProxyValue;
-
-      // If stored value exists and differs from current, logout
-      if (storedProxyValue !== null && storedProxyValue !== currentProxyValue) {
+      if (localProxyValue !== null && localProxyValue !== currentProxyValue) {
         console.warn('VITE_USE_LOCAL_PROXY value changed, logging out user');
         logout();
-        dispatch({ type: 'LOGOUT' });
-        return;
       }
     }
-
-    dispatch({ type: 'INITIALIZE', payload: { isAuthenticated: !!token } });
   }, [token, localProxyValue, logout]);
 
-  if (state.loading || !state.initialized) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-  return state.isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;
+  return token ? <Outlet /> : <Navigate to="/login" replace />;
 };
 
 // Main route configuration

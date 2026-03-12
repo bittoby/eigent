@@ -143,11 +143,10 @@ export default function Login() {
       const exactMatch = savedAccounts.find(
         (a) => a.email.toLowerCase() === trimmed.toLowerCase()
       );
-      const passwordToFill = exactMatch?.password ?? '';
       setFormData((prev) => ({
         ...prev,
         email: value,
-        password: passwordToFill,
+        password: exactMatch ? (exactMatch.password ?? '') : '',
       }));
     } else {
       setFormData((prev) => ({
@@ -223,7 +222,12 @@ export default function Login() {
 
   const handleRemoveAccount = async (e: React.MouseEvent, email: string) => {
     e.stopPropagation();
-    await window.electronAPI.credentialsRemove(email);
+    try {
+      const result = await window.electronAPI.credentialsRemove(email);
+      if (!result.success) return;
+    } catch {
+      return;
+    }
     const updated = savedAccounts.filter(
       (a) => a.email.toLowerCase() !== email.toLowerCase()
     );

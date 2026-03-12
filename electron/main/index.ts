@@ -2422,8 +2422,10 @@ function registerIpcHandlers() {
     const dir = path.dirname(ACCOUNTS_FILE);
     await fsp.mkdir(dir, { recursive: true, mode: 0o700 });
     const encrypted = safeStorage.encryptString(JSON.stringify(toWrite));
-    await fsp.writeFile(ACCOUNTS_FILE, encrypted);
-    await fsp.chmod(ACCOUNTS_FILE, 0o600);
+    const tmpFile = ACCOUNTS_FILE + '.tmp';
+    await fsp.writeFile(tmpFile, encrypted);
+    await fsp.chmod(tmpFile, 0o600);
+    await fsp.rename(tmpFile, ACCOUNTS_FILE);
   };
 
   ipcMain.handle(
@@ -2466,10 +2468,9 @@ function registerIpcHandlers() {
           password: passwordStr,
         };
         if (index >= 0) {
-          accounts[index] = entry;
-        } else {
-          accounts.push(entry);
+          accounts.splice(index, 1);
         }
+        accounts.unshift(entry);
         await writeSavedAccounts(accounts);
         return { success: true };
       } catch {
